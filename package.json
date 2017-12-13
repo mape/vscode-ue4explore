@@ -1,0 +1,78 @@
+{
+	"name": "vscode-ue4explore",
+	"displayName": "UE4 Explore",
+	"description": "Explore static methods in UE4.",
+	"version": "0.1.0",
+	"publisher": "mape",
+	"icon": "images/icon.png",
+	"galleryBanner": {
+		"color": "#252627",
+		"theme": "dark"
+	},
+	"license": "MIT",
+	"licenseUrl": "LICENSE",
+	"engines": {
+		"vscode": "^1.9.0"
+	},
+	"categories": [
+		"Other",
+		"Snippets",
+		"Languages"
+	],
+	"activationEvents": [
+		"*"
+	],
+	"main": "./out/src/extension",
+	"contributes": {
+		"commands": [
+			{
+				"command": "ue4explore.exploreDefinitions",
+				"title": "Create From Usage"
+			}
+		],
+		"menus": {
+			"editor/context": [
+				{
+					"command": "ue4explore.exploreDefinitions"
+				}
+			]
+		},
+		"keybindings": [
+			{
+				"command": "ue4explore.exploreDefinitions",
+				"key": "Shift+Ctrl+I"
+			}
+		],
+		"configuration": {
+			"type": "object",
+			"title": "Create From Usage configuration",
+			"properties": {}
+		}
+	},
+	"scripts": {
+		"vscode:prepublish": "npm run compile",
+		"lint": "node ./node_modules/tslint/bin/tslint src/**/*.ts",
+		"compile": "npm run lint && tsc -p ./",
+		"postinstall": "node ./node_modules/vscode/bin/install"
+	},
+	"devDependencies": {
+		"@types/node": "^6.0.59",
+		"tslint": "^4.3.1",
+		"vscode": "^1.0.3"
+	},
+	"dependencies": {
+		"typescript": "^2.2.0"
+	},
+	"bugs": {
+		"url": "https://github.com/mape/vscode-ue4explore/issues"
+	},
+	"repository": {
+		"type": "git",
+		"url": "https://github.com/mape/vscode-ue4explore"
+	},
+	"__metadata": {
+		"id": "f309138b-6935-4f87-a568-ee583227b696",
+		"publisherDisplayName": "mape",
+		"publisherId": "a66fd1e4-8d3f-4371-ad65-6e6bd624716c"
+	}
+}
