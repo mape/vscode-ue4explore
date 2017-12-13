@@ -2,7 +2,7 @@
 	"name": "vscode-ue4explore",
 	"displayName": "UE4 Explore",
 	"description": "Explore static methods in UE4.",
-	"version": "0.1.0",
+	"version": "0.1.1",
 	"publisher": "mape",
 	"icon": "images/icon.png",
 	"galleryBanner": {
@@ -27,7 +27,7 @@
 		"commands": [
 			{
 				"command": "ue4explore.exploreDefinitions",
-				"title": "Create From Usage"
+				"title": "UE4 Explore"
 			}
 		],
 		"menus": {
@@ -45,7 +45,7 @@
 		],
 		"configuration": {
 			"type": "object",
-			"title": "Create From Usage configuration",
+			"title": "UE4 Explore configuration",
 			"properties": {}
 		}
 	},
