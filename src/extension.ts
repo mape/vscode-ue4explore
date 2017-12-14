@@ -48,7 +48,7 @@ function runCommand(
 
 export function activate(context: vs.ExtensionContext): void {
 	context.subscriptions.push(
-		vs.commands.registerCommand('ue4explore.exploreDefinitions', () => {
+		vs.commands.registerCommand('ue4explore.exploreDeclarations', () => {
 			const activeTextEditor = vs.window.activeTextEditor;
 			if (!activeTextEditor) {
 				return;

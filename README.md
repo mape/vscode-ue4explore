@@ -1,7 +1,7 @@
 # VSCode - UE4 Explore
 "UE4 Explore" is a Visual Studio Code extension that makes it easier to find where a static method is defined throughout the UE4 api.
 
-It does this by searching though generated UE4 TypeScript definition files, in the tsconfig.json assigned type roots.
+It does this by searching though generated UE4 TypeScript declaration files, in the tsconfig.json assigned type roots.
 
 Press `Ctrl+Shift+I` to search.
 
@@ -16,4 +16,4 @@ The following commands are bound by default when the extension is installed.
 
 | Command                      | Keybinding         |
 | ---------------------------- | ------------------ |
-| ue4explore.exploreDefinitions | `Ctrl+Shift+I`    |
+| ue4explore.exploreDeclarations | `Ctrl+Shift+I`    |
