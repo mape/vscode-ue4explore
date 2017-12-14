@@ -2,9 +2,8 @@ import * as path from 'path';
 import * as ts from 'typescript';
 import * as vs from 'vscode';
 import { exec } from 'child_process';
-import * as vscode from 'vscode';
 
-interface DefintionPick extends vscode.QuickPickItem {
+interface DefintionPick extends vs.QuickPickItem {
 	reference: string;
 	libFile: string;
 }
@@ -15,9 +14,33 @@ interface RipGrepResult {
 interface ExecOutput {
 	stdout: string;
 	stderr: string;
-};
+}
+
 export class Explorer implements vs.Disposable {
-	private vsOutputChannel: vs.OutputChannel;
+	public async explore(editor: vs.TextEditor) {
+		const searchForText = await vs.window.showInputBox();
+		if (!searchForText) {
+			return;
+		}
+
+		const typescriptConfig = this.getTypescriptConfig(editor);
+		if (!typescriptConfig) {
+			vs.window.showErrorMessage('Could not find TypeScript config file');
+			return;
+		}
+
+		const typeRoots = typescriptConfig.options.typeRoots || [];
+		const ripgrepPromises = typeRoots.map(filePath => {
+			const cmd = `rg -i --vimgrep ${searchForText} ${filePath}`;
+			return this.execp(cmd);
+		});
+
+		const searchResults = await Promise.all(ripgrepPromises);
+
+		const entries = this.parseStdout(searchResults);
+		const information = this.extractInformation(entries, searchForText);
+		this.showQuickPicker(information, editor);
+	}
 
 	private getTypescriptConfig(
 		editor: vs.TextEditor
@@ -42,6 +65,7 @@ export class Explorer implements vs.Disposable {
 
 			return null;
 		}
+
 		const cwd = configPath.replace(/tsconfig.json/i, '');
 		const config = ts.parseJsonConfigFileContent(
 			configJson.config,
@@ -53,6 +77,7 @@ export class Explorer implements vs.Disposable {
 			},
 			cwd
 		);
+
 		if (config.errors.length) {
 			config.errors.map(err => err.messageText).forEach(error => {
 				vs.window.showErrorMessage(error.toString());
@@ -63,29 +88,9 @@ export class Explorer implements vs.Disposable {
 		return config;
 	}
 
-	public async explore(editor: vs.TextEditor) {
-		const searchForText = await vscode.window.showInputBox();
-		const typescriptConfig = this.getTypescriptConfig(editor);
-		if (!typescriptConfig) {
-			return;
-		}
-
-		const typeRoots = typescriptConfig.options.typeRoots;
-		const ripgrepPromises = typeRoots.map(filePath => {
-			const cmd = `rg -i --vimgrep ${searchForText} ${filePath}`;
-			return this.execp(cmd);
-		});
-
-		const searchResults = await Promise.all(ripgrepPromises);
-
-		const entries = this.parseStdout(searchResults);
-		const information = this.extractInformation(entries, searchForText);
-		this.showQuickPicker(information, editor);
-	}
-
 	private execp(cmd: string): Promise<ExecOutput> {
-		return new Promise((resolve, reject) => {
-			exec(cmd, (err, stdout, stderr) => {
+		return new Promise((resolve, _reject) => {
+			exec(cmd, (_err, stdout, stderr) => {
 				// Don't care about error since empty ripgrep throws error
 				resolve({
 					stdout,
@@ -140,7 +145,12 @@ export class Explorer implements vs.Disposable {
 		const duplicates = new Map<string, boolean>();
 		const items = entries
 			.map(info => {
-				const label = info.info.match(/static (.*?)\(/)[1];
+				const match = info.info.match(/static (.*?)\(/);
+				if (!match) {
+					return null;
+				}
+
+				const label = match[1];
 				const description = info.info.replace(/static (.*?)\(/, '(');
 				const inputRegex = new RegExp(searchForText, 'i');
 				if (duplicates.get(label) || !label.match(inputRegex)) {
@@ -158,14 +168,16 @@ export class Explorer implements vs.Disposable {
 
 				return item;
 			})
-			.filter(Boolean)
+			.filter((item: DefintionPick | null): item is DefintionPick => (
+				item !== null
+			))
 			.sort(this.sortByLabel);
 
 		return items;
 	}
 
 	private showQuickPicker(items: DefintionPick[], editor: vs.TextEditor) {
-		vscode.window.showQuickPick(items).then((result) => {
+		vs.window.showQuickPick(items).then((result) => {
 			if (!result) {
 				return;
 			}
@@ -189,13 +201,10 @@ export class Explorer implements vs.Disposable {
 				),
 				editor.selection
 			);
-			vscode.commands.executeCommand('editor.action.triggerSuggest');
+			vs.commands.executeCommand('editor.action.triggerSuggest');
 		});
 	}
 
 	public dispose() {
-		if (this.vsOutputChannel) {
-			this.vsOutputChannel.dispose();
-		}
 	}
 }

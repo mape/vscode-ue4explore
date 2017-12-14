@@ -2,7 +2,7 @@
 	"name": "vscode-ue4explore",
 	"displayName": "UE4 Explore",
 	"description": "Explore static methods in UE4.",
-	"version": "0.1.1",
+	"version": "0.1.2",
 	"publisher": "mape",
 	"icon": "images/icon.png",
 	"galleryBanner": {
