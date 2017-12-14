@@ -1,8 +1,8 @@
 {
 	"name": "vscode-ue4explore",
 	"displayName": "UE4 Explore",
-	"description": "Explore static methods in UE4.",
-	"version": "0.1.5",
+	"description": "Explore static UE4 methods in VsCode though TypeScript declaration files Edit.",
+	"version": "0.1.6",
 	"publisher": "mape",
 	"icon": "images/icon.png",
 	"galleryBanner": {
