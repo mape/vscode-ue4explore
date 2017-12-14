@@ -195,13 +195,17 @@ export class Explorer implements vs.Disposable {
 				);
 			}
 
-			editor.insertSnippet(
-				new vs.SnippetString(
-					`const ${result.label} = ${result.libFile}.${result.label}`
-				),
-				editor.selection
-			);
-			vs.commands.executeCommand('editor.action.triggerSuggest');
+			const configuration = vs.workspace.getConfiguration('ue4explore');
+			const shouldInsertVariable = configuration.get('insertVariable');
+			if (shouldInsertVariable) {
+				editor.insertSnippet(
+					new vs.SnippetString(
+						`const ${result.label} = ${result.libFile}.${result.label}`
+					),
+					editor.selection
+				);
+				vs.commands.executeCommand('editor.action.triggerSuggest');
+			}
 		});
 	}
 

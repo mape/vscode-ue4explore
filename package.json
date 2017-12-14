@@ -46,7 +46,13 @@
 		"configuration": {
 			"type": "object",
 			"title": "UE4 Explore configuration",
-			"properties": {}
+			"properties": {
+				"ue4explore.insertVariable": {
+					"type": "boolean",
+					"description": "Insert variable on selection",
+					"default": true
+				}
+			}
 		}
 	},
 	"scripts": {
