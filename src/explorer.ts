@@ -5,7 +5,7 @@ import { exec } from 'child_process';
 
 interface DefintionPick extends vs.QuickPickItem {
 	reference: string;
-	libFile: string;
+	snippet: string;
 }
 interface RipGrepResult {
 	name: string;
@@ -114,10 +114,18 @@ export class Explorer implements vs.Disposable {
 						:
 						file);
 					const info = parts.slice(4).join(' ').trim();
-					// Assume we only want static methods for now
-					if (!info.match(/static/)) {
+
+					// Assume we only want classes, methods and properties
+					if (
+						!(
+							info.match(/^declare class/) ||
+							info.match(/^static/) ||
+							info.match(/^[a-z].*;$/i)
+						)
+					) {
 						return;
 					}
+
 					files.push({
 						name,
 						info
@@ -145,28 +153,37 @@ export class Explorer implements vs.Disposable {
 		const duplicates = new Map<string, boolean>();
 		const items = entries
 			.map(info => {
-				const match = info.info.match(/static (.*?)\(/);
-				if (!match) {
-					return null;
+				const staticMethodMatch = info.info.match(/static (.*?)\(/);
+				if (staticMethodMatch) {
+					return this.extractStaticMethodMatch(
+						info,
+						staticMethodMatch,
+						searchForText,
+						duplicates
+					);
 				}
 
-				const label = match[1];
-				const description = info.info.replace(/static (.*?)\(/, '(');
-				const inputRegex = new RegExp(searchForText, 'i');
-				if (duplicates.get(label) || !label.match(inputRegex)) {
-					return null;
+				const methodMatch = info.info.match(/([a-z].*\(.*\).*;$)/);
+				if (methodMatch) {
+					return this.extractMethodMatch(
+						info,
+						duplicates
+					);
 				}
 
-				duplicates.set(label, true);
-				const item: DefintionPick = {
-					label: label,
-					description: `<${info.name}> ${description}`,
-					detail: '',
-					libFile: info.name,
-					reference: `/// <reference types="${info.name}" />`
-				};
+				const classMatch = info.info.match(/declare class (.*?) \{/);
+				if (classMatch) {
+					return this.extractClassMatch(
+						info,
+						classMatch,
+						duplicates
+					);
+				}
 
-				return item;
+				return this.extractPropertyMatch(
+					info,
+					duplicates
+				);
 			})
 			.filter((item: DefintionPick | null): item is DefintionPick => (
 				item !== null
@@ -174,6 +191,100 @@ export class Explorer implements vs.Disposable {
 			.sort(this.sortByLabel);
 
 		return items;
+	}
+
+	private extractStaticMethodMatch(
+		info: RipGrepResult,
+		match: RegExpMatchArray,
+		searchForText: string,
+		duplicates: Map<string, boolean>
+	) {
+		const label = match[1];
+		const key = `static-${label}`;
+		const description = info.info.replace(/static (.*?)\(/, '(');
+		const inputRegex = new RegExp(searchForText, 'i');
+		if (duplicates.get(key) || !label.match(inputRegex)) {
+			return null;
+		}
+
+		duplicates.set(key, true);
+		const item: DefintionPick = {
+			label: `<static> ${label}`,
+			description: `<${info.name}> ${description}`,
+			detail: '',
+			snippet: `const ${label} = ${info.name}.${label}`,
+			reference: `/// <reference types="${info.name}" />`
+		};
+
+		return item;
+	}
+
+	private extractMethodMatch(
+		info: RipGrepResult,
+		duplicates: Map<string, boolean>
+	) {
+		const label = info.info.split('(')[0];
+		const description = '(' + info.info.split('(').slice(1).join('');
+		const key = `method-${info.name}-${label}`;
+		if (duplicates.get(key)) {
+			return null;
+		}
+
+		duplicates.set(key, true);
+		const item: DefintionPick = {
+			label: `<method> ${label}`,
+			description: description,
+			detail: '',
+			snippet: `const ${label} = `,
+			reference: `/// <reference types="${info.name}" />`
+		};
+
+		return item;
+	}
+
+	private extractClassMatch(
+		info: RipGrepResult,
+		match: RegExpMatchArray,
+		duplicates: Map<string, boolean>
+	) {
+		const label = match[1];
+		const key = `class-${label}`;
+		if (duplicates.get(key)) {
+			return null;
+		}
+
+		duplicates.set(key, true);
+		const item: DefintionPick = {
+			label: `<class> ${info.name}`,
+			description: label.replace(`${info.name} `, ''),
+			detail: '',
+			snippet: `const a${info.name} = new ${info.name}`,
+			reference: `/// <reference types="${info.name}" />`
+		};
+
+		return item;
+	}
+
+	private extractPropertyMatch(
+		info: RipGrepResult,
+		duplicates: Map<string, boolean>
+	) {
+		const label = info.info.split(' ')[0];
+		const key = `property-${info.name}-${info.info}`;
+		if (duplicates.get(key)) {
+			return null;
+		}
+
+		duplicates.set(key, true);
+		const item: DefintionPick = {
+			label: `<prop> ${info.info}`,
+			description: `in ${info.name}`,
+			detail: '',
+			snippet: `const ${label} = `,
+			reference: `/// <reference types="${info.name}" />`
+		};
+
+		return item;
 	}
 
 	private showQuickPicker(items: DefintionPick[], editor: vs.TextEditor) {
@@ -188,7 +299,9 @@ export class Explorer implements vs.Disposable {
 				documentText.indexOf(result.reference) === -1
 			);
 
+			let lineOffset = 0;
 			if (notPresentInDocument) {
+				lineOffset += 1;
 				editor.insertSnippet(
 					new vs.SnippetString(result.reference + '\n'),
 					new vs.Position(0, 0)
@@ -197,12 +310,16 @@ export class Explorer implements vs.Disposable {
 
 			const configuration = vs.workspace.getConfiguration('ue4explore');
 			const shouldInsertVariable = configuration.get('insertVariable');
+
+			const insertPoint = new vs.Position(
+				editor.selection.start.line + lineOffset,
+				editor.selection.start.character
+			);
+
 			if (shouldInsertVariable) {
 				editor.insertSnippet(
-					new vs.SnippetString(
-						`const ${result.label} = ${result.libFile}.${result.label}`
-					),
-					editor.selection
+					new vs.SnippetString(result.snippet),
+					insertPoint
 				);
 				vs.commands.executeCommand('editor.action.triggerSuggest');
 			}
