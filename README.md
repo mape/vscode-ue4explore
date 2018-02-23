@@ -1,7 +1,7 @@
 # VSCode - UE4 Explore
 "UE4 Explore" is a Visual Studio Code extension that makes it easier to find where classes, methods and properties are defined throughout the UE4 api.
 
-It does this by searching though generated UE4 TypeScript declaration files, in the tsconfig.json assigned type roots.
+It does this by searching through generated UE4 TypeScript declaration files, in the tsconfig.json assigned type roots.
 
 Press `Ctrl+Shift+I` to search.
 

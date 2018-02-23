@@ -1,8 +1,8 @@
 {
 	"name": "vscode-ue4explore",
 	"displayName": "UE4 Explore",
-	"description": "Explore the UE4 API in VsCode though TypeScript declaration files",
-	"version": "0.2.0",
+	"description": "Explore the UE4 API in VsCode through TypeScript declaration files",
+	"version": "0.2.1",
 	"publisher": "mape",
 	"icon": "images/icon.png",
 	"galleryBanner": {
