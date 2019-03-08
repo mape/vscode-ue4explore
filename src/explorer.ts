@@ -1,10 +1,9 @@
+import { exec } from 'child_process';
 import * as path from 'path';
 import * as ts from 'typescript';
 import * as vs from 'vscode';
-import { exec } from 'child_process';
 
 interface DefintionPick extends vs.QuickPickItem {
-	reference: string;
 	snippet: string;
 }
 interface RipGrepResult {
@@ -45,23 +44,15 @@ export class Explorer implements vs.Disposable {
 	private getTypescriptConfig(
 		editor: vs.TextEditor
 	): ts.ParsedCommandLine | null {
-		const fileDir = (
-			path.dirname(editor.document.fileName).replace(/\\/g, '/')
-		);
-		const configPath = ts.findConfigFile(
-			fileDir,
-			ts.sys.fileExists
-		);
+		const fileDir = path
+			.dirname(editor.document.fileName)
+			.replace(/\\/g, '/');
+		const configPath = ts.findConfigFile(fileDir, ts.sys.fileExists);
 
-		const configJson = ts.readConfigFile(
-			configPath,
-			ts.sys.readFile
-		);
+		const configJson = ts.readConfigFile(configPath, ts.sys.readFile);
 
 		if (configJson.error) {
-			vs.window.showErrorMessage(
-				configJson.error.messageText.toString()
-			);
+			vs.window.showErrorMessage(configJson.error.messageText.toString());
 
 			return null;
 		}
@@ -79,9 +70,11 @@ export class Explorer implements vs.Disposable {
 		);
 
 		if (config.errors.length) {
-			config.errors.map(err => err.messageText).forEach(error => {
-				vs.window.showErrorMessage(error.toString());
-			});
+			config.errors
+				.map(err => err.messageText)
+				.forEach(error => {
+					vs.window.showErrorMessage(error.toString());
+				});
 			return null;
 		}
 
@@ -109,11 +102,15 @@ export class Explorer implements vs.Disposable {
 				.forEach(msg => {
 					const parts = msg.split(':');
 					const file = path.resolve(parts.slice(0, 2).join(''));
-					let name = path.basename(file.match(/index.d.ts/) ?
-						file.replace('\\index.d.ts', '')
-						:
-						file);
-					const info = parts.slice(4).join(' ').trim();
+					let name = path.basename(
+						file.match(/index.d.ts/)
+							? file.replace('\\index.d.ts', '')
+							: file
+					);
+					const info = parts
+						.slice(4)
+						.join(' ')
+						.trim();
 
 					// Assume we only want classes, methods and properties
 					if (
@@ -165,29 +162,20 @@ export class Explorer implements vs.Disposable {
 
 				const methodMatch = info.info.match(/([a-z].*\(.*\).*;$)/);
 				if (methodMatch) {
-					return this.extractMethodMatch(
-						info,
-						duplicates
-					);
+					return this.extractMethodMatch(info, duplicates);
 				}
 
 				const classMatch = info.info.match(/declare class (.*?) \{/);
 				if (classMatch) {
-					return this.extractClassMatch(
-						info,
-						classMatch,
-						duplicates
-					);
+					return this.extractClassMatch(info, classMatch, duplicates);
 				}
 
-				return this.extractPropertyMatch(
-					info,
-					duplicates
-				);
+				return this.extractPropertyMatch(info, duplicates);
 			})
-			.filter((item: DefintionPick | null): item is DefintionPick => (
-				item !== null
-			))
+			.filter(
+				(item: DefintionPick | null): item is DefintionPick =>
+					item !== null
+			)
 			.sort(this.sortByLabel);
 
 		return items;
@@ -212,8 +200,7 @@ export class Explorer implements vs.Disposable {
 			label: `<static> ${label}`,
 			description: `<${info.name}> ${description}`,
 			detail: '',
-			snippet: `const ${label} = ${info.name}.${label}`,
-			reference: `/// <reference types="${info.name}" />`
+			snippet: `const ${label} = ${info.name}.${label}`
 		};
 
 		return item;
@@ -224,7 +211,12 @@ export class Explorer implements vs.Disposable {
 		duplicates: Map<string, boolean>
 	) {
 		const label = info.info.split('(')[0];
-		const description = '(' + info.info.split('(').slice(1).join('');
+		const description =
+			'(' +
+			info.info
+				.split('(')
+				.slice(1)
+				.join('');
 		const key = `method-${info.name}-${label}`;
 		if (duplicates.get(key)) {
 			return null;
@@ -235,8 +227,7 @@ export class Explorer implements vs.Disposable {
 			label: `<method> ${label}`,
 			description: description,
 			detail: '',
-			snippet: `const ${label} = `,
-			reference: `/// <reference types="${info.name}" />`
+			snippet: `const ${label} = `
 		};
 
 		return item;
@@ -258,8 +249,7 @@ export class Explorer implements vs.Disposable {
 			label: `<class> ${info.name}`,
 			description: label.replace(`${info.name} `, ''),
 			detail: '',
-			snippet: `const a${info.name} = new ${info.name}`,
-			reference: `/// <reference types="${info.name}" />`
+			snippet: `const a${info.name} = new ${info.name}`
 		};
 
 		return item;
@@ -280,39 +270,23 @@ export class Explorer implements vs.Disposable {
 			label: `<prop> ${info.info}`,
 			description: `in ${info.name}`,
 			detail: '',
-			snippet: `const ${label} = `,
-			reference: `/// <reference types="${info.name}" />`
+			snippet: `const ${label} = `
 		};
 
 		return item;
 	}
 
 	private showQuickPicker(items: DefintionPick[], editor: vs.TextEditor) {
-		vs.window.showQuickPick(items).then((result) => {
+		vs.window.showQuickPick(items).then(result => {
 			if (!result) {
 				return;
-			}
-
-			const documentText = editor.document.getText();
-
-			const notPresentInDocument = (
-				documentText.indexOf(result.reference) === -1
-			);
-
-			let lineOffset = 0;
-			if (notPresentInDocument) {
-				lineOffset += 1;
-				editor.insertSnippet(
-					new vs.SnippetString(result.reference + '\n'),
-					new vs.Position(0, 0)
-				);
 			}
 
 			const configuration = vs.workspace.getConfiguration('ue4explore');
 			const shouldInsertVariable = configuration.get('insertVariable');
 
 			const insertPoint = new vs.Position(
-				editor.selection.start.line + lineOffset,
+				editor.selection.start.line,
 				editor.selection.start.character
 			);
 
@@ -326,6 +300,5 @@ export class Explorer implements vs.Disposable {
 		});
 	}
 
-	public dispose() {
-	}
+	public dispose() {}
 }
